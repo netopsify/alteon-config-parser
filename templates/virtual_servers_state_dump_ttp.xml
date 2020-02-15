@@ -1,0 +1,11 @@
+Virtual server state:
+<group name="vips_state" default="">
+{{ virt_seq }}: IP4 {{ vip_ip | is_ip }}, {{ vip_mac }}, vname {{ vip_name | re(".*") }}
+  <group name="services.{{ vip_port }}" default="">
+    {{ vip_port }}: rport {{ real_port }}, group {{ group_seq }}, {{ group_name| re(".*") }}, health {{ health_monitor | ORPHRASE }}
+    <group name="real_servers" default="">
+        {{ node_seq }}: {{ node_ip | is_ip }}, {{ node_name| re(".*") }}, group {{ config_state }}, health  {{ health_state| ORPHRASE }}, {{ response_time_in_ms }} ms, {{ node_state| re(".*") }}
+      Reason: {{ node_state_reason| re(".*") }}
+    </group>
+  </group>
+</group>

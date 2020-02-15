@@ -1,0 +1,18 @@
+snat_rule: SNAT_110-10-10
+
+# ---------------------------------------------------------------------
+# If routing changes are required for the migration set to True.
+network_cfg_required: True # True or False
+# ---------------------------------------------------------------------
+# If network_cfg_required was set to True fill out the below information
+# ---------------------------------------------------------------------
+network_cfg:
+  vss: False # True or False if the switches are VSS enabled. i.e. below you will fill only device_1 info.
+  device_1: 
+    ip: 1.1.1.2
+    name: device-4050-01
+  device_2: # If VSS this device will be ignored
+    ip: 1.2.2.2
+    name: device-4050-02
+  vrf: RPIME # False or VRF name
+  f5_floating_ip: 11.1.2.2

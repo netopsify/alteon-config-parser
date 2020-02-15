@@ -1,0 +1,11 @@
+<template>
+  <group name="pbind_cookie" default="">
+/c/slb/virt {{ virt_seq }}/service {{ vip_port }} https/pbind {{ pbind }} {{ pbind_type | ORPHRASE }}
+/c/slb/virt {{ virt_seq }}/service {{ vip_port }} https/http/rcount {{ rcount }}
+  </group>
+</template>
+<template>
+  <group name="pbind_sslid" default="">
+/c/slb/virt {{ virt_seq }}/service {{ vip_port }} https/pbind {{ pbind }}
+  </group>
+</template>

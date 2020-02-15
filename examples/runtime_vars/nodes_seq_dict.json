@@ -1,0 +1,1 @@
+{"1": {"config_state": "ena", "interval": "None", "ipver": "v4", "node_ip": "11.1.1.19", "node_name": "geterr_a3098b_201807_real1", "node_seq": "1", "retry": "None"}, "2": {"config_state": "ena", "interval": "None", "ipver": "v4", "node_ip": "1.1.1.20", "node_name": "geterr_a3098b-443", "node_seq": "2", "retry": "None"}}

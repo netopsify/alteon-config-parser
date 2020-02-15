@@ -1,0 +1,29 @@
+!
+create ltm pool {{ vip['pool']['name'] }} load-balancing-mode {{ vip['pool']['lb_method'] }} members add { {% for node in vip['pool']['members'] %}{{ node['node_ip'] }}:{{ node['node_port'] }} {address {{ node['node_ip'] }}} {% if not loop.last %}{% endif %}{% endfor %} } monitor tcp
+!
+create ltm virtual {{ vip['vip_name'] }} destination {{ vip['vip_ip'] }}:{{ vip['vip_port'] }} ip-protocol tcp mask 255.255.255.255 pool {{ vip['pool']['name'] }} profiles add { fastL4 { } } persist replace-all-with { source_addr } rule { {{ host_vars['snat_rule'] }} } description {{ vip['vip_name'] }}  disabled
+!
+##############-RUN THESE COMMANDS AT CUTOVER-##############-
+!
+**************-RUN THESE COMMANDS ON F5-*******************-
+!
+modify ltm virtual {{ vip['vip_name'] }} enabled
+!
+**************-RUN THESE COMMANDS ON Alteon-***************-
+!
+/c/slb/virt {{ vip['virt_seq'] }}
+dis
+!
+##################-RUOLLBACK COMMANDS-#####################-
+!
+**************-RUN THESE COMMANDS ON F5-*******************-
+!
+delete ltm virtual {{ vip['vip_name'] }}
+delete ltm pool {{ vip['pool']['name'] }}
+!
+**************-RUN THESE COMMANDS ON Alteon-***************-
+!
+/c/slb/virt {{ vip['virt_seq'] }}
+del
+!
+<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>

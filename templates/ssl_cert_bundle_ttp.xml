@@ -1,0 +1,5 @@
+<group name="ssl_cert_bundles.{{ ssl_cert_bundle }}" default="">
+/c/slb/ssl/certs/group {{ ssl_cert_bundle }}
+	type {{ ssl_cert_bundle_type }}
+	add "{{ ssl_cert_bundle_sub_ca }}"
+</group>

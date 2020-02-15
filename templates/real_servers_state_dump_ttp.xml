@@ -1,0 +1,4 @@
+<group name="nodes_state" default="">
+{{ node_seq | isdigit }}: {{ node_ip | is_ip }}, {{ node_name | re(".*") }}, {{ node_mac | re(".*") }},  vlan {{ vlan | re(".*") }}, port {{ port | re(".*") }}, health {{ health }}, {{ state }}
+Reason: {{ service_failed_reason | re(".*") }}.
+</group>

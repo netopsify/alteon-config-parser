@@ -1,0 +1,13 @@
+<group name="pools" default="">
+/c/slb/group {{ group_seq | isdigit }}
+	ipver {{ ipver }}
+	<group name="backup_obj">
+	backup {{ type | re("\w") }}{{ seq | re("\d+") }}
+	</group>
+	metric {{ lb_method }}
+	health {{ health_monitor }}
+	<group name="node_list*">
+	add {{ node_seq | isdigit }}
+	</group>
+	name "{{ group_name | re(".*") }}"
+</group>

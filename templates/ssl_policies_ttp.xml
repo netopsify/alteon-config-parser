@@ -1,0 +1,20 @@
+<group name="ssl_policies.{{ ssl_policy_name }}**" default="">
+/c/slb/ssl/sslpol {{ ssl_policy_name }}
+	cipher "{{ cipher }}"
+	dhkey {{ dhkey }}
+	intermca group "{{ intermediate_group }}"
+	convert {{ convert }}
+	{{ ssl_policy_state }}
+	<group name="{{ ssl_policy_name }}.frver**" default="">
+/c/slb/ssl/sslpol {{ ssl_policy_name }}/frver
+	ssl3 {{ ssl3 }}
+		<group name="{{ ssl_policy_name }}.backend**" default="">
+/c/slb/ssl/sslpol {{ ssl_policy_name }}/backend
+	ssl {{ ssl }}
+	cipher "{{ cipher }}"
+/c/slb/ssl/sslpol {{ backend }}/backend/ver
+	ssl3 {{ ssl3 }}
+	tls12 {{ tls12 }}
+		</group>
+	</group>
+</group>

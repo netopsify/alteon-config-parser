@@ -1,0 +1,39 @@
+{% for vip in vips %}
+^^^^^^^^^^^^^^^^ F5 Configuration ^^^^^^^^^^^^^^^
+!
+{% include "./templates/type_" ~ vip['vip_type'] ~ ".j2" %}
+!
+{%- if host_vars['network_cfg_required'] == True -%}
+{% set next_hop_list = [] %}
+^^^^^^^^^^^^^ Network Configuration ^^^^^^^^^^^^^
+!
+{%- if host_vars['network_cfg']['vss'] == True %}
+================================
+{{ host_vars['network_cfg']['device_1']['name'] }} - {{ host_vars['network_cfg']['device_1']['ip'] }}
+================================
+!
+{%-else -%}
+================================
+{{ host_vars['network_cfg']['device_1']['name'] }} - {{ host_vars['network_cfg']['device_1']['ip'] }}
+{{ host_vars['network_cfg']['device_2']['name'] }} - {{ host_vars['network_cfg']['device_2']['ip'] }}
+================================
+!
+{%- endif -%}
+{%- if host_vars['network_cfg']['vrf'] == False -%}
+{%- if vip['vip_ip'] not in next_hop_list %}
+ip route {{ vip['vip_ip'] }}/32 {{ host_vars['network_cfg']['f5_floating_ip'] }} name {{ vip['vip_name'] }}
+!
+-----------------^^^^^^^^^^^^^^^^-----------------^^^^^^^^^^^^^^^^-----------------
+{% set _ = next_hop_list.append(vip['vip_ip']) %}
+{%- endif -%}
+{% else %}
+vrf context {{ host_vars['network_cfg']['vrf'] }}
+{%- if vip['vip_ip'] not in next_hop_list %}
+ ip route {{ vip['vip_ip'] }}/32 {{ host_vars['network_cfg']['f5_floating_ip'] }} name {{ vip['vip_name'] }}
+!
+-----------------^^^^^^^^^^^^^^^^-----------------^^^^^^^^^^^^^^^^-----------------
+{% set _ = next_hop_list.append(vip['vip_ip']) %}
+{%- endif -%}
+{%- endif -%}
+{%- endif -%}
+{% endfor %}

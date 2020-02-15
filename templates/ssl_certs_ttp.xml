@@ -1,0 +1,6 @@
+<group name="ssl_certs.{{ ssl_cert_key }}" default="">
+/c/slb/ssl/certs/key {{ ssl_cert_key }}
+/c/slb/ssl/certs/cert {{ ssl_cert }}
+	name "{{ ssl_cert_name }}"
+/c/slb/ssl/certs/import cert "{{ ssl_cert_import_name }}" text
+</group>

@@ -1,0 +1,75 @@
+###############################################
+#Note: Do not create irule if it already exists
+###############################################
+!
+tmsh
+!
+edit ltm rule iRule-PD-S-SESSION-ID
+when HTTP_RESPONSE {
+  if { [HTTP::cookie exists "PD-S-SESSION-ID"] } {
+    persist add uie [HTTP::cookie "PD-S-SESSION-ID"]
+ }
+}
+when HTTP_REQUEST {
+  if { [HTTP::cookie exists "PD-S-SESSION-ID"] } {
+    persist uie [HTTP::cookie "PD-S-SESSION-ID"]
+  }
+}
+!
+!
+install sys crypto cert ca-{{ vip['vip_port'] }}.{{ vip['vip_name'] | replace('vs-tcp', '') }}.crt from-editor
+Type "i" for inserting the complete certificate
+ESC
+:wq!
+Press y
+!
+!
+install sys crypto cert cert-{{ vip['vip_port'] }}.{{ vip['vip_name'] | replace('vs-tcp', '') }}.crt from-editor
+Type "i" for inserting the complete certificate
+ESC
+:wq!
+Press y
+!
+!
+install sys crypto key key-{{ vip['vip_port'] }}.{{ vip['vip_name'] | replace('vs-tcp', '') }}.key from-editor passphrase ******
+Type "i" for inserting the complete RSA private key
+ESC
+:wq!
+Press y
+save sys config
+!
+!
+create ltm profile client-ssl clientssl-{{ vip['vip_port'] }}.{{ vip['vip_name'] | replace('vs-tcp', '') }} defaults-from clientssl cert cert-{{ vip['vip_port'] }}.{{ vip['vip_name'] | replace('vs-tcp', '') }}.crt key key-{{ vip['vip_port'] }}.{{ vip['vip_name'] | replace('vs-tcp', '') }}.key chain ca-{{ vip['vip_port'] }}.{{ vip['vip_name'] | replace('vs-tcp', '') }}.crt ciphers 'HIGH:!SSLv3' passphrase **********
+!
+create ltm profile server-ssl serverssl-{{ vip['vip_port'] }}.{{ vip['vip_name'] | replace('vs-tcp', '') }} defaults-from serverssl ciphers 'HIGH:!SSLv3'
+create ltm profile one-connect oneconnect-{{ vip['vip_port'] }}.{{ vip['vip_name'] | replace('vs-tcp', '') }} defaults-from oneconnect
+create ltm persistence universal uni-persistence-{{ vip['vip_port'] }}.{{ vip['vip_name'] | replace('vs-tcp', '') }} rule iRule-PD-S-SESSION-ID timeout 7560
+!
+create ltm pool {{ vip['pool']['name'] }} load-balancing-mode {{ vip['pool']['lb_method'] }} members add { {% for node in vip['pool']['members'] %}{{ node['node_ip'] }}:{{ node['node_port'] }} {address {{ node['node_ip'] }}} {% if not loop.last %}{% endif %}{% endfor %} } monitor tcp
+!
+create ltm virtual {{ vip['vip_name'] }} destination {{ vip['vip_ip'] }}:{{ vip['vip_port'] }} ip-protocol tcp mask 255.255.255.255 pool {{ vip['pool']['name'] }} profiles add { tcp_timeout_600 http oneconnect-{{ vip['vip_port'] }}.{{ vip['vip_name'] | replace('vs-tcp', '') }} clientssl-{{ vip['vip_port'] }}.{{ vip['vip_name'] | replace('vs-tcp', '') }} server-ssl serverssl-{{ vip['vip_port'] }}.{{ vip['vip_name'] | replace('vs-tcp', '') }} } persist replace-all-with { uni-persistence-{{ vip['vip_port'] }}.{{ vip['vip_name'] | replace('vs-tcp', '') }} } rule { {{ host_vars['snat_rule'] }} } description {{ vip['vip_name'] }}  disabled
+!
+##############-RUN THESE COMMANDS AT CUTOVER-##############-
+!
+**************-RUN THESE COMMANDS ON F5-*******************-
+!
+modify ltm virtual {{ vip['vip_name'] }} enabled
+!
+**************-RUN THESE COMMANDS ON Alteon-***************-
+!
+/c/slb/virt {{ vip['virt_seq'] }}
+dis
+!
+##################-RUOLLBACK COMMANDS-#####################-
+!
+**************-RUN THESE COMMANDS ON F5-*******************-
+!
+delete ltm virtual {{ vip['vip_name'] }}
+delete ltm pool {{ vip['pool']['name'] }}
+!
+**************-RUN THESE COMMANDS ON Alteon-***************-
+!
+/c/slb/virt {{ vip['virt_seq'] }}
+del
+!
+<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>

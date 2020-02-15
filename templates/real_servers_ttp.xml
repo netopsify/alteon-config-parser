@@ -1,0 +1,12 @@
+<group name="nodes" default="">
+/c/slb/real {{ node_seq | isdigit }}
+	{{ config_state }}
+	ipver {{ ipver }}
+	rip {{ node_ip | is_ip }}
+	inter {{ interval }}
+	retry {{ retry }}
+	name "{{ node_name | re(".*") }}"
+	<group name="node_port*">
+	addport {{ node_port | isdigit }}
+	</group>
+</group>
