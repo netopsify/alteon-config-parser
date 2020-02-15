@@ -44,6 +44,6 @@ However, a detailed parser `alteon-dump-parser` using Ansible is also available.
 
 ### Requirements
 
-ttp (tested with 0.2.0)
-jinja2
-pyyaml
+* ttp (tested with 0.2.0)
+* jinja2
+* pyyaml
