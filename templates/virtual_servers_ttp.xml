@@ -1,42 +1,25 @@
 <template results="per_template">
-	<group name="virt.{{ vip }}**" default="">
-/c/slb/virt {{ virt_seq }}
+<group name="virt.{{ vip }}" default="">
+/c/slb/virt {{ virt_seq | DIGIT }}
 	{{ config_state }}
-	ipver {{ ipver }}
-	vip {{ vip | is_ip }}
+	ipver {{ ipver}}
+	vip {{ vip }}
 	rtsrcmac {{ rtsrcmac }}
-	vname {{ vip_name | re(".*") }}
-		<group name="services.{{ vip_port }}" default="" containsall="vip_port, vip_service">
-/c/slb/virt {{ virt_seq }}/service {{ vip_port }} {{ vip_service | exclude_re('^wts$')| exclude_re('^wts/wts$') }}
-	group {{ group_seq }}
+	vname "{{ vip_name | ORPHRASE }}"
+<group name="services.{{ port }}" contains="group_seq, real_port" default="">
+/c/slb/virt {{ virt_seq | DIGIT }}/service {{ port | DIGIT }} {{ proto | exclude(ssl) }}
+	group {{group_seq }}
 	rport {{ real_port }}
-	dbind {{ dbind | replace('forceproxy', 'snat') }}
-	pbind {{ pbind | re(".*") | contains_re('clientip') | let("clientip") }}
-	ptmout {{ ptmout }}
-			<group name="wts" containsall="wts, wts_state">
-/c/slb/virt {{ virt_seq }}/service {{ vip_port }} {{ vip_service | contains_re('wts') }}
-	group {{ group_seq }}
-	rport {{ real_port }}
-	dbind {{ dbind | replace('forceproxy', 'snat') }}
-	ptmout {{ ptmout }}
-/c/slb/virt {{ virt_seq }}/service {{ vip_port }} {{ wts | contains_re('wts/wts')}}
-	{{ wts_state }}
-	userhash {{ userhash }}
-			</group>
-			<group name="appshape" containsall="appshape, appshape_seq, appshape_script">
-/c/slb/virt {{ virt_seq }}/service {{ vip_port }} {{ vip_service }}/{{ appshape | contains_re('appshape')}}
-	add {{ appshape_seq }} {{ appshape_script }}
-	alwayson {{ alwayson }}
-			</group>
-			<group name="xforward" containsall="http, xforward">
-/c/slb/virt {{ virt_seq }}/service {{ vip_port }} {{ vip_service }}/{{ http | contains_re('http')}}
+	pbind {{ pbind }}
+	dbind {{ dbind }}
 	xforward {{ xforward }}
-			</group>
-			<group name="ssl_profile**" containsall="ssl, ssl_server_cert, ssl_profile">
-/c/slb/virt {{ virt_seq }}/service {{ vip_port }} {{ ssl | contains_re('https/ssl')}}
+	httpmod {{ httpmod }}
+</group> 
+<group name="ssl_profile">
+/c/slb/virt {{ virt_seq }}/service 443 https/ssl
 	srvrcert cert {{ ssl_server_cert }}
-	sslpol {{ ssl_profile | re(".*") }}
-			</group>
-		</group>
-	</group>
+	sslpol {{ ssl_profile }}    
+    {{ ssl | set("https/ssl") }}
+</group>
+</group>
 </template>
