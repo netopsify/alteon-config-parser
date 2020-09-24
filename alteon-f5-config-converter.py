@@ -218,36 +218,50 @@ with open(runtime_vars_dir + "/ssl_policies_parsed_results.json", "w+",) as f:
 
 #### Below function is now combining vip relevant data only...####
 # Updating the VIPS Dictionary with cookie and sslid; pbind settings
+
 for vip, vip_config in vips.items():
     if isinstance(vip_config,list):
-        print(f"There are multiple /virt configs for {vip}.\n change the IP to something else to fix this later revert it in F5 config.")
+        print(f"There are multiple /virt configs for {vip}.\n")
+        for srv in vip_config:
+            for vip_port, config in srv['services'].items():
+                for cookie in pbind_cookie:
+                    try:
+                        if config['virt_seq'] == cookie['virt_seq'] and vip_port == cookie['vip_port']:
+                            config['pbind'] = cookie['pbind']
+                            config['pbind_type'] = cookie['pbind_type']
+                            config['rcount'] = cookie['rcount']
+                    except:
+                        extype, value, tb = sys.exc_info()
+                        traceback.print_exc()
+                        pdb.post_mortem(tb)
+                for sslid in pbind_sslid:
+                    if config['virt_seq'] == sslid['virt_seq'] and vip_port == sslid['vip_port']:
+                        config['pbind'] = sslid['pbind']
     elif isinstance(vip_config,dict):
-        for vip_port, config in vip_config['services'].items():
-            for cookie in pbind_cookie:
-                try:
-                    if config['virt_seq'] == cookie['virt_seq'] and vip_port == cookie['vip_port']:
-                        config['pbind'] = cookie['pbind']
-                        config['pbind_type'] = cookie['pbind_type']
-                        config['rcount'] = cookie['rcount']
-                except:
-                    extype, value, tb = sys.exc_info()
-                    traceback.print_exc()
-                    pdb.post_mortem(tb)
-            for sslid in pbind_sslid:
-                if config['virt_seq'] == sslid['virt_seq'] and vip_port == sslid['vip_port']:
-                    config['pbind'] = sslid['pbind']
+        if 'services' in vip_config.keys():
+            for vip_port, config in vip_config['services'].items():
+                for cookie in pbind_cookie:
+                    try:
+                        if config['virt_seq'] == cookie['virt_seq'] and vip_port == cookie['vip_port']:
+                            config['pbind'] = cookie['pbind']
+                            config['pbind_type'] = cookie['pbind_type']
+                            config['rcount'] = cookie['rcount']
+                    except:
+                        extype, value, tb = sys.exc_info()
+                        traceback.print_exc()
+                        pdb.post_mortem(tb)
+                for sslid in pbind_sslid:
+                    if config['virt_seq'] == sslid['virt_seq'] and vip_port == sslid['vip_port']:
+                        config['pbind'] = sslid['pbind']
 
 # Saving new VIPs dict to file
-with open(runtime_vars_dir + "/vips_including_ssl.json", "w+",) as f:
+with open(runtime_vars_dir + "/vips.json", "w+",) as f:
     f.write(json.dumps(vips, indent=4, sort_keys=True))
 # pp(nodes)
 # pp(pools)
 # pp(vips)
 # pp(pbind_cookie)
 # pp(pbind_sslid)
-
-# pp(vips['10.195.12.44'])  # print vip with cookie persistence profile
-# pp(vips['10.195.12.53'])  # print vip with sslid persistence profile
 
 ############ END Config Parser Function ############
 
@@ -340,165 +354,225 @@ print('Total Virtual Servers are = ' + str(len(vips)))
 print('Total SSL Cookie profiles are = ' + str(len(pbind_cookie)))
 print('Total SSLID profiles are = ' + str(len(pbind_sslid)))
 
-############ Parse State Data with TTP Templates ############
-
-############ Load State Data Files ############
-if alteon_state_dump:
-    with open(alteon_state_dump, 'r') as reader:
-        state_data = reader.read()
-
-    with open('./templates/real_servers_state_dump_ttp.xml', 'r') as real_servers_state_dump_ttp:
-        real_servers_state_dump_ttp_template = real_servers_state_dump_ttp.read()
-
-    # create parser object and parse data using template:
-    real_servers_state_dump_parser = ttp(data=state_data,
-                                         template=real_servers_state_dump_ttp_template)
-    real_servers_state_dump_parser.parse()
-
-    # print result in JSON format
-    real_servers_state_dump_parser_results = real_servers_state_dump_parser.result()
-    real_servers_state_dump_json_dumps = json.dumps(real_servers_state_dump_parser_results, sort_keys=True,
-                                                    indent=4, separators=(',', ': '))
-    real_servers_state_dump = json.loads(real_servers_state_dump_json_dumps)
-    with open(runtime_vars_dir + "/real_servers_state_dump_parser_results.json", "w+",) as f:
-        f.write(json.dumps(real_servers_state_dump[0][0], indent=4, sort_keys=True))
-
-    nodes_state = real_servers_state_dump[0][0]['nodes_state']
-
-    with open('./templates/virtual_servers_state_dump_ttp.xml', 'r') as virtual_servers_state_dump_ttp:
-        virtual_servers_state_dump_ttp_template = virtual_servers_state_dump_ttp.read()
-
-    # create parser object and parse data using template:
-    virtual_servers_state_dump_parser = ttp(data=state_data,
-                                            template=virtual_servers_state_dump_ttp_template)
-    virtual_servers_state_dump_parser.parse()
-
-    # print result in JSON format
-    virtual_servers_state_dump_parser_results = virtual_servers_state_dump_parser.result()
-    virtual_servers_state_dump_json_dumps = json.dumps(virtual_servers_state_dump_parser_results, sort_keys=True,
-                                                       indent=4, separators=(',', ': '))
-    virtual_servers_state_dump = json.loads(
-        virtual_servers_state_dump_json_dumps)
-    with open(runtime_vars_dir + "/virtual_servers_state_dump_parser_results.json", "w+",) as f:
-        f.write(json.dumps(virtual_servers_state_dump[0][0], indent=4, sort_keys=True))
-
-    vips_state = virtual_servers_state_dump[0][0]['vips_state']
-
-    print('Total Nodes in State dump are = ' + str(len(nodes_state)))
-    print('Total VIPs in State dump are = ' + str(len(vips_state)))
-
-############ End Parse State Data with TTP Templates ############
-
-
 ############ Creating Data Structure in Yaml ############
 
 def model_alteon_data(vips):
     all_vips = []
     for vip, vip_config in vips.items():
         # print(vip)
-        if vip_config['config_state'] == 'ena':
-            for vip_port, srv_config in vip_config['services'].items():
-                vip_dict = dict({
-                    "vip_ip": "",
-                    "vip_port": "",
-                    "vip_name": "",
-                    "vip_type": "",
-                    "virt_seq": "",
-                    "pool": {
-                        "name": "",
-                        "lb_method": "",
-                        "members": []
-                    }})
-                vip_dict['virt_seq'] = srv_config["virt_seq"]
-                vip_dict['vip_ip'] = vip
-                vip_dict['vip_port'] = vip_port
-                if vip_config['vip_name'] != 'None':
-                    vip_name = regex_replace(
-                        vip_config['vip_name'], "[^A-Za-z0-9-_.]", "")
-                    vip_dict['vip_name'] = "vs-tcp-" + str(vip_port) + "-" + vip_name + "-" + str(vip)
-                    vip_dict['pool']['name'] = "pool-tcp-" + str(vip_port) + "-" + vip_name + "-" + str(vip)
-                elif vip_config['vip_name'] == 'None':
-                    group_name = pools_seq_dict[srv_config['group_seq']
-                                                ]['group_name']
-                    if group_name != 'None':
-                        vip_name = regex_replace(
-                            group_name, "[^A-Za-z0-9-_.]", "")
-                        vip_dict['vip_name'] = "vs-tcp-" + str(vip_port) + "-" + vip_name + "-" + str(vip)
-                        vip_dict['pool']['name'] = "pool-tcp-" + str(vip_port) + "-" + vip_name + "-" + str(vip)
-                    elif group_name == 'None':
-                        node_list = pools_seq_dict[srv_config['group_seq']
-                                                   ]['node_list']
-                        for i, node in enumerate(node_list):
-                            node_name = nodes_seq_dict[node['node_seq']
-                                                       ]['node_name']
-                            if node_name != 'None':
-                                vip_name = node_name
+        if isinstance(vip_config, list):
+            for srv in vip_config:
+                if srv['config_state'] == 'ena':
+                    if 'services' in srv.keys():
+                        for vip_port, srv_config in srv['services'].items():
+                            vip_dict = dict({
+                                "vip_ip": "",
+                                "vip_port": "",
+                                "vip_name": "",
+                                "vip_type": "",
+                                "virt_seq": "",
+                                "pool": {
+                                    "name": "",
+                                    "lb_method": "",
+                                    "members": []
+                                }})
+                            vip_dict['virt_seq'] = srv_config["virt_seq"]
+                            vip_dict['vip_ip'] = vip
+                            vip_dict['vip_port'] = vip_port
+                            if srv['vip_name'] != 'None':
+                                vip_name = regex_replace(
+                                    srv['vip_name'], "[^A-Za-z0-9-_.]", "")
                                 vip_dict['vip_name'] = "vs-tcp-" + str(vip_port) + "-" + vip_name + "-" + str(vip)
                                 vip_dict['pool']['name'] = "pool-tcp-" + str(vip_port) + "-" + vip_name + "-" + str(vip)
-                                break
-                            elif node_name == 'None' and i != len(node_list) - 1:
-                                continue
+                            elif srv['vip_name'] == 'None':
+                                group_name = pools_seq_dict[srv_config['group_seq']
+                                                            ]['group_name']
+                                if group_name != 'None':
+                                    vip_name = regex_replace(
+                                        group_name, "[^A-Za-z0-9-_.]", "")
+                                    vip_dict['vip_name'] = "vs-tcp-" + str(vip_port) + "-" + vip_name + "-" + str(vip)
+                                    vip_dict['pool']['name'] = "pool-tcp-" + str(vip_port) + "-" + vip_name + "-" + str(vip)
+                                elif group_name == 'None':
+                                    node_list = pools_seq_dict[srv_config['group_seq']
+                                                            ]['node_list']
+                                    for i, node in enumerate(node_list):
+                                        node_name = nodes_seq_dict[node['node_seq']
+                                                                ]['node_name']
+                                        if node_name != 'None':
+                                            vip_name = node_name
+                                            vip_dict['vip_name'] = "vs-tcp-" + str(vip_port) + "-" + vip_name + "-" + str(vip)
+                                            vip_dict['pool']['name'] = "pool-tcp-" + str(vip_port) + "-" + vip_name + "-" + str(vip)
+                                            break
+                                        elif node_name == 'None' and i != len(node_list) - 1:
+                                            continue
+                                        else:
+                                            vip_name = "migrated-from-alteon"
+                                            vip_dict['vip_name'] = "vs-tcp-" + str(vip_port) + "-" + vip_name + "-" + str(vip)
+                                            vip_dict['pool']['name'] = "pool-tcp-" + str(vip_port) + "-" + vip_name + "-" + str(vip)
+                                else:
+                                    vip_name = "unknown-vip_name-fixme"
+                                    vip_dict['vip_name'] = "vs-tcp-" + str(vip_port) + "-" + vip_name + "-" + str(vip)
+                                    vip_dict['pool']['name'] = "pool-tcp-" + str(vip_port) + "-" + vip_name + "-" + str(vip)
+                            lb_method = pools_seq_dict[srv_config['group_seq']
+                                                    ]['lb_method']
+                            if lb_method == 'roundrobin':
+                                vip_dict['pool']['lb_method'] = "round-robin"
+                            elif lb_method == 'None':
+                                vip_dict['pool']['lb_method'] = "least-connections-member"
+                            nodes_list = pools_seq_dict[srv_config['group_seq']
+                                                        ]['node_list']
+                            for node in nodes_list:
+
+                                node_seq = node['node_seq']
+                                node_ip = node_name = nodes_seq_dict[node_seq]['node_ip']
+
+                                node_name = regex_replace(
+                                    nodes_seq_dict[node_seq]['node_name'], "[^A-Za-z0-9-_.]", "")
+                                vip_dict['pool']['members'].append({
+                                    'node_name': node_name if node_name != 'None' else vip_dict['vip_name'] + "_real_server_" + str(node_seq),
+                                    'node_ip': node_ip,
+                                    'node_port': srv_config['real_port'] if srv_config['real_port'] != 'None' else vip_port
+                                })
+                            if 'pbind' in srv_config.keys() and 'ssl_profile' not in srv_config.keys():
+                                if srv_config['pbind'] != "None":
+                                    if srv_config['pbind'] == "sslid":
+                                        vip_dict['vip_type'] = "b"
+                                    elif srv_config['pbind'] == "clientip":
+                                        vip_dict['vip_type'] = "e"
+                                    else:
+                                        vip_dict['vip_type'] = "a"
+                                else:
+                                    vip_dict['vip_type'] = "a"
+                            elif 'pbind' in srv_config.keys() and 'ssl_profile' in srv_config.keys():
+                                if srv_config['pbind'] != "None":
+                                    if srv_config['pbind'] == "cookie":
+                                        vip_dict['vip_type'] = "c"
+                                        vip_dict['ssl_profile'] = srv_config['ssl_profile']
+                                        vip_dict['ssl_profile'].update({
+                                            'persistence': srv_config['pbind'],
+                                            'persist_cookie': srv_config['pbind_type'],
+                                        })
+                                    else:
+                                        vip_dict['vip_type'] = "a"
+                                else:
+                                    vip_dict['vip_type'] = "a"
+                            elif srv_config['dbind'] == "ena":
+                                vip_dict['vip_type'] = "a"
+
+                            elif srv_config['dbind'] == "None":
+                                vip_dict['vip_type'] = "d"
+
                             else:
-                                vip_name = "migrated-from-alteon"
+                                vip_dict['vip_type'] = "a"
+
+                            all_vips.append(vip_dict)
+
+        elif isinstance(vip_config, dict):
+            if vip_config['config_state'] == 'ena':
+                if 'services' in vip_config.keys():
+                    for vip_port, srv_config in vip_config['services'].items():
+                        vip_dict = dict({
+                            "vip_ip": "",
+                            "vip_port": "",
+                            "vip_name": "",
+                            "vip_type": "",
+                            "virt_seq": "",
+                            "pool": {
+                                "name": "",
+                                "lb_method": "",
+                                "members": []
+                            }})
+                        vip_dict['virt_seq'] = srv_config["virt_seq"]
+                        vip_dict['vip_ip'] = vip
+                        vip_dict['vip_port'] = vip_port
+                        if vip_config['vip_name'] != 'None':
+                            vip_name = regex_replace(
+                                vip_config['vip_name'], "[^A-Za-z0-9-_.]", "")
+                            vip_dict['vip_name'] = "vs-tcp-" + str(vip_port) + "-" + vip_name + "-" + str(vip)
+                            vip_dict['pool']['name'] = "pool-tcp-" + str(vip_port) + "-" + vip_name + "-" + str(vip)
+                        elif vip_config['vip_name'] == 'None':
+                            group_name = pools_seq_dict[srv_config['group_seq']
+                                                        ]['group_name']
+                            if group_name != 'None':
+                                vip_name = regex_replace(
+                                    group_name, "[^A-Za-z0-9-_.]", "")
                                 vip_dict['vip_name'] = "vs-tcp-" + str(vip_port) + "-" + vip_name + "-" + str(vip)
                                 vip_dict['pool']['name'] = "pool-tcp-" + str(vip_port) + "-" + vip_name + "-" + str(vip)
-                    else:
-                        vip_name = "unknown-vip_name-fixme"
-                        vip_dict['vip_name'] = "vs-tcp-" + str(vip_port) + "-" + vip_name + "-" + str(vip)
-                        vip_dict['pool']['name'] = "pool-tcp-" + str(vip_port) + "-" + vip_name + "-" + str(vip)
-                lb_method = pools_seq_dict[srv_config['group_seq']
-                                           ]['lb_method']
-                if lb_method == 'roundrobin':
-                    vip_dict['pool']['lb_method'] = "round-robin"
-                elif lb_method == 'None':
-                    vip_dict['pool']['lb_method'] = "least-connections-member"
-                nodes_list = pools_seq_dict[srv_config['group_seq']
-                                            ]['node_list']
-                for node in nodes_list:
+                            elif group_name == 'None':
+                                node_list = pools_seq_dict[srv_config['group_seq']
+                                                        ]['node_list']
+                                for i, node in enumerate(node_list):
+                                    node_name = nodes_seq_dict[node['node_seq']
+                                                            ]['node_name']
+                                    if node_name != 'None':
+                                        vip_name = node_name
+                                        vip_dict['vip_name'] = "vs-tcp-" + str(vip_port) + "-" + vip_name + "-" + str(vip)
+                                        vip_dict['pool']['name'] = "pool-tcp-" + str(vip_port) + "-" + vip_name + "-" + str(vip)
+                                        break
+                                    elif node_name == 'None' and i != len(node_list) - 1:
+                                        continue
+                                    else:
+                                        vip_name = "migrated-from-alteon"
+                                        vip_dict['vip_name'] = "vs-tcp-" + str(vip_port) + "-" + vip_name + "-" + str(vip)
+                                        vip_dict['pool']['name'] = "pool-tcp-" + str(vip_port) + "-" + vip_name + "-" + str(vip)
+                            else:
+                                vip_name = "unknown-vip_name-fixme"
+                                vip_dict['vip_name'] = "vs-tcp-" + str(vip_port) + "-" + vip_name + "-" + str(vip)
+                                vip_dict['pool']['name'] = "pool-tcp-" + str(vip_port) + "-" + vip_name + "-" + str(vip)
+                        lb_method = pools_seq_dict[srv_config['group_seq']
+                                                ]['lb_method']
+                        if lb_method == 'roundrobin':
+                            vip_dict['pool']['lb_method'] = "round-robin"
+                        elif lb_method == 'None':
+                            vip_dict['pool']['lb_method'] = "least-connections-member"
+                        nodes_list = pools_seq_dict[srv_config['group_seq']
+                                                    ]['node_list']
+                        for node in nodes_list:
 
-                    node_seq = node['node_seq']
-                    node_ip = node_name = nodes_seq_dict[node_seq]['node_ip']
+                            node_seq = node['node_seq']
+                            node_ip = node_name = nodes_seq_dict[node_seq]['node_ip']
 
-                    node_name = regex_replace(
-                        nodes_seq_dict[node_seq]['node_name'], "[^A-Za-z0-9-_.]", "")
-                    vip_dict['pool']['members'].append({
-                        'node_name': node_name if node_name != 'None' else vip_dict['vip_name'] + "_real_server_" + str(node_seq),
-                        'node_ip': node_ip,
-                        'node_port': srv_config['real_port'] if srv_config['real_port'] != 'None' else vip_port
-                    })
-                if 'pbind' in srv_config.keys() and 'ssl_profile' not in srv_config.keys():
-                    if srv_config['pbind'] != "None":
-                        if srv_config['pbind'] == "sslid":
-                            vip_dict['vip_type'] = "b"
-                        elif srv_config['pbind'] == "clientip":
-                            vip_dict['vip_type'] = "e"
-                        else:
-                            vip_dict['vip_type'] = "a"
-                    else:
-                        vip_dict['vip_type'] = "a"
-                elif 'pbind' in srv_config.keys() and 'ssl_profile' in srv_config.keys():
-                    if srv_config['pbind'] != "None":
-                        if srv_config['pbind'] == "cookie":
-                            vip_dict['vip_type'] = "c"
-                            vip_dict['ssl_profile'] = srv_config['ssl_profile']
-                            vip_dict['ssl_profile'].update({
-                                'persistence': srv_config['pbind'],
-                                'persist_cookie': srv_config['pbind_type'],
+                            node_name = regex_replace(
+                                nodes_seq_dict[node_seq]['node_name'], "[^A-Za-z0-9-_.]", "")
+                            vip_dict['pool']['members'].append({
+                                'node_name': node_name if node_name != 'None' else vip_dict['vip_name'] + "_real_server_" + str(node_seq),
+                                'node_ip': node_ip,
+                                'node_port': srv_config['real_port'] if srv_config['real_port'] != 'None' else vip_port
                             })
+                        if 'pbind' in srv_config.keys() and 'ssl_profile' not in srv_config.keys():
+                            if srv_config['pbind'] != "None":
+                                if srv_config['pbind'] == "sslid":
+                                    vip_dict['vip_type'] = "b"
+                                elif srv_config['pbind'] == "clientip":
+                                    vip_dict['vip_type'] = "e"
+                                else:
+                                    vip_dict['vip_type'] = "a"
+                            else:
+                                vip_dict['vip_type'] = "a"
+                        elif 'pbind' in srv_config.keys() and 'ssl_profile' in srv_config.keys():
+                            if srv_config['pbind'] != "None":
+                                if srv_config['pbind'] == "cookie":
+                                    vip_dict['vip_type'] = "c"
+                                    vip_dict['ssl_profile'] = srv_config['ssl_profile']
+                                    vip_dict['ssl_profile'].update({
+                                        'persistence': srv_config['pbind'],
+                                        'persist_cookie': srv_config['pbind_type'],
+                                    })
+                                else:
+                                    vip_dict['vip_type'] = "a"
+                            else:
+                                vip_dict['vip_type'] = "a"
+                        elif srv_config['dbind'] == "ena":
+                            vip_dict['vip_type'] = "a"
+
+                        elif srv_config['dbind'] == "None":
+                            vip_dict['vip_type'] = "d"
+
                         else:
                             vip_dict['vip_type'] = "a"
-                    else:
-                        vip_dict['vip_type'] = "a"
-                elif srv_config['dbind'] == "ena":
-                    vip_dict['vip_type'] = "a"
 
-                elif srv_config['dbind'] == "None":
-                    vip_dict['vip_type'] = "d"
+                        all_vips.append(vip_dict)
 
-                else:
-                    vip_dict['vip_type'] = "a"
-
-                all_vips.append(vip_dict)
     return all_vips
 
 # VIP Types - reference only
